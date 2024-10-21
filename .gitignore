@@ -1,0 +1,12 @@
+*.inc
+*.mod
+*.o
+*.gcda
+*.gcno
+test/bin
+*build*
+.archive/
+src/ED_VERSION.f90
+.DS_Store
+*~
+src/*egg*
