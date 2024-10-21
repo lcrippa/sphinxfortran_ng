@@ -1,0 +1,14 @@
+[build-system]
+build-backend = 'mesonpy'
+requires = ['meson-python']
+
+
+[project]
+name = 'sphinxfortran_ng'
+version = '0.1.0'
+description = 'Modified/fixed version of sphinx-fortran'
+authors = [
+]
+
+[project.urls]
+Repository = "https://github.com/SciFortran/sphinxfortran_ng"
