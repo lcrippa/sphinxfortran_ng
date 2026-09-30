@@ -209,26 +209,28 @@ Points worth noting:
   ``:f:var:`name``` becomes a link to that argument.
 
 Ways to describe an argument
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
-   :widths: 24 46 30
 
    * - Form
      - Where
      - Behaviour
+
    * - Inline comment
-     - ``real(8) :: x  !Description`` on the declaration line
-     - **Recommended.** Wins over the two other forms.
+     - ``real(8) :: x  ! Description`` on the declaration line
+     - **Recommended.** Wins over the other two forms.
+
    * - ``@param``
      - ``!@param x: description`` in the description block
-     - The line is removed from the description and its text is *appended*
-       to the inline description of ``x`` if any.
+     - The line is removed from the description and its text is
+       *appended* to the inline description of ``x``, if any.
+
    * - Header line
      - ``!x: description`` in the description block
-     - Copied to the description of ``x`` **and kept** in the text of the
-       routine. Used only when there is no inline comment.
+     - Copied to the description of ``x`` **and kept** in the text
+       of the routine. Used only when there is no inline comment.
 
 Example mixing the three forms:
 
