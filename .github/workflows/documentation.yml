@@ -10,23 +10,9 @@ permissions:
 jobs:
   docs:
     runs-on: ubuntu-latest
-    steps:
-      - name: Determine tag
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest \
-              | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
-          fi
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-      
+    steps:    
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.tag.outputs.tag }}
           
       - uses: actions/setup-python@v5
       
