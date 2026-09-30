@@ -1,6 +1,13 @@
 sphinxfortran_ng
 ================
 
+.. sidebar:: sphinxfortran_ng 0.6.0
+
+      .. image:: _static/pictures/logo_github.png
+         :width: 75%
+         :align: center
+         :target: https://github.com/SciFortran/sphinxfortran_ng
+
 ``sphinxfortran_ng`` is a Sphinx extension that provides a Fortran domain
 and an autodoc-like mechanism for documenting Fortran source code.
 
