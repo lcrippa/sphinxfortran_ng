@@ -1,6 +1,7 @@
 # sphinxfortran_ng
 
 [![PyPI](https://img.shields.io/pypi/v/sphinxfortran-ng.svg)](https://pypi.org/project/sphinxfortran-ng)
+[![GitHub Pages](https://shields.io)](https://scifortran.github.io/sphinxfortran_ng/)
 
 An improved version of the original sphinx-fortran python module.
 
