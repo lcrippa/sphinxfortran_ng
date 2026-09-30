@@ -10,11 +10,15 @@ terms of the NumPy License.
 NO WARRANTY IS EXPRESSED OR IMPLIED.  USE AT YOUR OWN RISK.
 
 
+Trimmed copy of numpy.f2py.crackfortran, keeping only what is needed by the
+Sphinx Fortran autodoc extension (``crackfortran(files)``, ``fortrantypes``
+and the ``verbose``/``quiet`` flags). The command line interface, the .pyf
+writer (``crack2fortran``) and the f2py-only post-processing hook have been
+removed.
+
 Usage of crackfortran:
 ======================
-Command line keys: -quiet,-verbose,-fix,-f77,-f90,-show,-h <pyffilename>
-                   -m <module name for f77 routines>,--ignore-contains
-Functions: crackfortran, crack2fortran
+Function: crackfortran
 The following Fortran statements/constructions are supported
 (or will be if needed):
    block data,byte,call,character,common,complex,contains,data,
@@ -33,7 +37,6 @@ Note: pythonmodule is introduced to represent Python module
 Usage:
   `postlist=crackfortran(files)`
   `postlist` contains declaration information read from the list of files `files`.
-  `crack2fortran(postlist)` returns a fortran code to be saved to pyf-file
 
   `postlist` has the following structure:
  *** it is a list of dictionaries containing `blocks':
@@ -71,7 +74,6 @@ Usage:
      B['entry'] --- dictionary {entryname:argslist,..}
      B['varnames'] --- list of variable names given in the order of reading the
                        Fortran code, useful for derived types.
-     B['saved_interface'] --- a string of scanned routine signature, defines explicit interface
  *** Variable definition is a dictionary
      D = B['vars'][<variable name>] =
      {'typespec'[,'attrspec','kindselector','charselector','=','typename']}
@@ -150,29 +152,22 @@ try:
     import charset_normalizer
 except ImportError:
     charset_normalizer = None
-
-from numpy.f2py import __version__
-
-# The environment provided by auxfuncs.py is needed for some calls to eval.
-# As the needed functions cannot be determined by static inspection of the
-# code, it is safest to use import * pending a major refactoring of f2py.
-from numpy.f2py.auxfuncs import *
 from numpy.f2py import symbolic
-
-f2py_version = __version__.version
+from numpy.f2py.auxfuncs import (
+    errmess, getdimension, hascommon, isarray, iscomplex, isdouble, isexternal,
+    isintent_aux, isintent_callback, isintent_in, isintent_inout,
+    isintent_inplace, islogical, isscalar, isstring, l_or, show,
+)
 
 # Global flags:
 strictf77 = 1          # Ignore `!' comments unless line[0]=='!'
 sourcecodeform = 'fix'  # 'fix','free'
 quiet = 0              # Be verbose if 0 (Obsolete: not used any more)
 verbose = 1            # Be quiet if 0, extra verbose if > 1.
-tabchar = 4 * ' '
-pyffilename = ''
 f77modulename = ''
 skipemptyends = 0      # for old F77 programs without 'program' statement
 ignorecontains = 1
 dolowercase = 1
-debug = []
 
 # Global variables
 beginpattern = ''
@@ -191,46 +186,7 @@ onlyfuncs = []
 previous_context = None
 skipblocksuntil = -1
 skipfuncs = []
-skipfunctions = []
 usermodules = []
-
-
-def reset_global_f2py_vars():
-    global groupcounter, grouplist, neededmodule, expectbegin
-    global skipblocksuntil, usermodules, f90modulevars, gotnextfile
-    global filepositiontext, currentfilename, skipfunctions, skipfuncs
-    global onlyfuncs, include_paths, previous_context
-    global strictf77, sourcecodeform, quiet, verbose, tabchar, pyffilename
-    global f77modulename, skipemptyends, ignorecontains, dolowercase, debug
-
-    # flags
-    strictf77 = 1
-    sourcecodeform = 'fix'
-    quiet = 0
-    verbose = 1
-    tabchar = 4 * ' '
-    pyffilename = ''
-    f77modulename = ''
-    skipemptyends = 0
-    ignorecontains = 1
-    dolowercase = 1
-    debug = []
-    # variables
-    groupcounter = 0
-    grouplist = {groupcounter: []}
-    neededmodule = -1
-    expectbegin = 1
-    skipblocksuntil = -1
-    usermodules = []
-    f90modulevars = {}
-    gotnextfile = 1
-    filepositiontext = ''
-    currentfilename = ''
-    skipfunctions = []
-    skipfuncs = []
-    onlyfuncs = []
-    include_paths = []
-    previous_context = None
 
 
 def outmess(line, flag=1):
@@ -249,43 +205,6 @@ for c in "abcdefghopqrstuvwxyz$_":
     defaultimplicitrules[c] = {'typespec': 'real'}
 for c in "ijklmn":
     defaultimplicitrules[c] = {'typespec': 'integer'}
-badnames = {}
-invbadnames = {}
-for n in ['int', 'double', 'float', 'char', 'short', 'long', 'void', 'case', 'while',
-          'return', 'signed', 'unsigned', 'if', 'for', 'typedef', 'sizeof', 'union',
-          'struct', 'static', 'register', 'new', 'break', 'do', 'goto', 'switch',
-          'continue', 'else', 'inline', 'extern', 'delete', 'const', 'auto',
-          'len', 'rank', 'shape', 'index', 'slen', 'size', '_i',
-          'max', 'min',
-          'flen', 'fshape',
-          'string', 'complex_double', 'float_double', 'stdin', 'stderr', 'stdout',
-          'type', 'default']:
-    badnames[n] = n
-    invbadnames[n] = n
-
-
-def rmbadname1(name):
-    if name in badnames:
-        errmess('rmbadname1: Replacing "%s" with "%s".\n' %
-                (name, badnames[name]))
-        return badnames[name]
-    return name
-
-
-def rmbadname(names):
-    return [rmbadname1(_m) for _m in names]
-
-
-def undo_rmbadname1(name):
-    if name in invbadnames:
-        errmess('undo_rmbadname1: Replacing "%s" with "%s".\n'
-                % (name, invbadnames[name]))
-        return invbadnames[name]
-    return name
-
-
-def undo_rmbadname(names):
-    return [undo_rmbadname1(_m) for _m in names]
 
 
 _has_f_header = re.compile(r'-\*-\s*fortran\s*-\*-', re.I).search
@@ -682,7 +601,6 @@ def _simplifyargs(argsline):
     return ','.join(a)
 
 crackline_re_1 = re.compile(r'\s*(?P<result>\b[a-z]+\w*\b)\s*=.*', re.I)
-crackline_bind_1 = re.compile(r'\s*(?P<bind>\b[a-z]+\w*\b)\s*=.*', re.I)
 crackline_bindlang = re.compile(
     r'\bbind\s*\(\s*(?P<lang>[^,()]+)\s*,\s*name\s*=\s*[\'"](?P<lang_name>[^\'"]+)[\'"]\s*\)',
     re.I,
@@ -775,8 +693,6 @@ def crackline(line, reset=0):
             return
         if 'externals' in groupcache[groupcounter]:
             for name in groupcache[groupcounter]['externals']:
-                if name in invbadnames:
-                    name = invbadnames[name]
                 if 'interfaced' in groupcache[groupcounter] and name in groupcache[groupcounter]['interfaced']:
                     continue
                 m1 = re.match(
@@ -940,13 +856,6 @@ real8pattern = re.compile(
     r'([-+]?((?:\d+(?:\.\d*)?|\d*\.\d+))[eE]((?:[-+]?\d+)?)|(\d+\.\d*))')
 
 _intentcallbackpattern = re.compile(r'intent\s*\(.*?\bcallback\b', re.I)
-
-
-def _is_intent_callback(vdecl):
-    for a in vdecl.get('attrspec', []):
-        if _intentcallbackpattern.match(a):
-            return 1
-    return 0
 
 
 def _resolvetypedefpattern(line):
@@ -1964,12 +1873,6 @@ def setcharselector(decl, sel, force=0):
             decl['charselector'][k] = sel[k]
     return decl
 
-
-def getblockname(block, unknown='unknown'):
-    if 'name' in block:
-        return block['name']
-    return unknown
-
 # post processing
 
 
@@ -2250,8 +2153,6 @@ def analyzebody(block, args, tab=''):
                 continue
             if onlyfuncs and b['name'] not in onlyfuncs:
                 continue
-            b['saved_interface'] = crack2fortrangen(
-                b, '\n' + ' ' * 6, as_interface=True)
 
         else:
             as_ = args
@@ -2286,88 +2187,6 @@ def buildimplicitrules(block):
                 else:
                     attrrules[k] = block['implicit'][k]['typespec']
     return implicitrules, attrrules
-
-
-def myeval(e, g=None, l=None):
-    """ Like `eval` but returns only integers and floats """
-    r = eval(e, g, l)
-    if type(r) in [int, float]:
-        return r
-    raise ValueError('r=%r' % (r))
-
-getlincoef_re_1 = re.compile(r'\A\b\w+\b\Z', re.I)
-
-
-def getlincoef(e, xset):  # e = a*x+b ; x in xset
-    """
-    Obtain ``a`` and ``b`` when ``e == "a*x+b"``, where ``x`` is a symbol in
-    xset.
-
-    >>> getlincoef('2*x + 1', {'x'})
-    (2, 1, 'x')
-    >>> getlincoef('3*x + x*2 + 2 + 1', {'x'})
-    (5, 3, 'x')
-    >>> getlincoef('0', {'x'})
-    (0, 0, None)
-    >>> getlincoef('0*x', {'x'})
-    (0, 0, 'x')
-    >>> getlincoef('x*x', {'x'})
-    (None, None, None)
-
-    This can be tricked by sufficiently complex expressions
-
-    >>> getlincoef('(x - 0.5)*(x - 1.5)*(x - 1)*x + 2*x + 3', {'x'})
-    (2.0, 3.0, 'x')
-    """
-    try:
-        c = int(myeval(e, {}, {}))
-        return 0, c, None
-    except Exception:
-        pass
-    if getlincoef_re_1.match(e):
-        return 1, 0, e
-    len_e = len(e)
-    for x in xset:
-        if len(x) > len_e:
-            continue
-        if re.search(r'\w\s*\([^)]*\b' + x + r'\b', e):
-            # skip function calls having x as an argument, e.g max(1, x)
-            continue
-        re_1 = re.compile(r'(?P<before>.*?)\b' + x + r'\b(?P<after>.*)', re.I)
-        m = re_1.match(e)
-        if m:
-            try:
-                m1 = re_1.match(e)
-                while m1:
-                    ee = '%s(%s)%s' % (
-                        m1.group('before'), 0, m1.group('after'))
-                    m1 = re_1.match(ee)
-                b = myeval(ee, {}, {})
-                m1 = re_1.match(e)
-                while m1:
-                    ee = '%s(%s)%s' % (
-                        m1.group('before'), 1, m1.group('after'))
-                    m1 = re_1.match(ee)
-                a = myeval(ee, {}, {}) - b
-                m1 = re_1.match(e)
-                while m1:
-                    ee = '%s(%s)%s' % (
-                        m1.group('before'), 0.5, m1.group('after'))
-                    m1 = re_1.match(ee)
-                c = myeval(ee, {}, {})
-                # computing another point to be sure that expression is linear
-                m1 = re_1.match(e)
-                while m1:
-                    ee = '%s(%s)%s' % (
-                        m1.group('before'), 1.5, m1.group('after'))
-                    m1 = re_1.match(ee)
-                c2 = myeval(ee, {}, {})
-                if (a * 0.5 + b == c and a * 1.5 + b == c2):
-                    return a, b, x
-            except Exception:
-                pass
-            break
-    return None, None, None
 
 
 word_pattern = re.compile(r'\b[a-z][\w$]*\b', re.I)
@@ -3252,504 +3071,15 @@ def determineexprtype(expr, vars, rules={}):
             'determineexprtype: could not determine expressions (%s) type.\n' % (repr(expr)))
     return t
 
-######
-
-
-def crack2fortrangen(block, tab='\n', as_interface=False):
-    global skipfuncs, onlyfuncs
-
-    setmesstext(block)
-    ret = ''
-    if isinstance(block, list):
-        for g in block:
-            if g and g['block'] in ['function', 'subroutine']:
-                if g['name'] in skipfuncs:
-                    continue
-                if onlyfuncs and g['name'] not in onlyfuncs:
-                    continue
-            ret = ret + crack2fortrangen(g, tab, as_interface=as_interface)
-        return ret
-    prefix = ''
-    name = ''
-    args = ''
-    blocktype = block['block']
-    if blocktype == 'program':
-        return ''
-    argsl = []
-    if 'name' in block:
-        name = block['name']
-    if 'args' in block:
-        vars = block['vars']
-        for a in block['args']:
-            a = expr2name(a, block, argsl)
-            if not isintent_callback(vars[a]):
-                argsl.append(a)
-        if block['block'] == 'function' or argsl:
-            args = '(%s)' % ','.join(argsl)
-    f2pyenhancements = ''
-    if 'f2pyenhancements' in block:
-        for k in list(block['f2pyenhancements'].keys()):
-            f2pyenhancements = '%s%s%s %s' % (
-                f2pyenhancements, tab + tabchar, k, block['f2pyenhancements'][k])
-    intent_lst = block.get('intent', [])[:]
-    if blocktype == 'function' and 'callback' in intent_lst:
-        intent_lst.remove('callback')
-    if intent_lst:
-        f2pyenhancements = '%s%sintent(%s) %s' %\
-                           (f2pyenhancements, tab + tabchar,
-                            ','.join(intent_lst), name)
-    use = ''
-    if 'use' in block:
-        use = use2fortran(block['use'], tab + tabchar)
-    common = ''
-    if 'common' in block:
-        common = common2fortran(block['common'], tab + tabchar)
-    if name == 'unknown_interface':
-        name = ''
-    result = ''
-    if 'result' in block:
-        result = ' result (%s)' % block['result']
-        if block['result'] not in argsl:
-            argsl.append(block['result'])
-    body = crack2fortrangen(block['body'], tab + tabchar, as_interface=as_interface)
-    vars = vars2fortran(
-        block, block['vars'], argsl, tab + tabchar, as_interface=as_interface)
-    mess = ''
-    if 'from' in block and not as_interface:
-        mess = '! in %s' % block['from']
-    if 'entry' in block:
-        entry_stmts = ''
-        for k, i in list(block['entry'].items()):
-            entry_stmts = '%s%sentry %s(%s)' \
-                          % (entry_stmts, tab + tabchar, k, ','.join(i))
-        body = body + entry_stmts
-    if blocktype == 'block data' and name == '_BLOCK_DATA_':
-        name = ''
-    ret = '%s%s%s %s%s%s %s%s%s%s%s%s%send %s %s' % (
-        tab, prefix, blocktype, name, args, result, mess, f2pyenhancements, use, vars, common, body, tab, blocktype, name)
-    return ret
-
-
-def common2fortran(common, tab=''):
-    ret = ''
-    for k in list(common.keys()):
-        if k == '_BLNK_':
-            ret = '%s%scommon %s' % (ret, tab, ','.join(common[k]))
-        else:
-            ret = '%s%scommon /%s/ %s' % (ret, tab, k, ','.join(common[k]))
-    return ret
-
-
-def use2fortran(use, tab=''):
-    ret = ''
-    for m in list(use.keys()):
-        ret = '%s%suse %s,' % (ret, tab, m)
-        if use[m] == {}:
-            if ret and ret[-1] == ',':
-                ret = ret[:-1]
-            continue
-        if 'only' in use[m] and use[m]['only']:
-            ret = '%s only:' % (ret)
-        if 'map' in use[m] and use[m]['map']:
-            c = ' '
-            for k in list(use[m]['map'].keys()):
-                if k == use[m]['map'][k]:
-                    ret = '%s%s%s' % (ret, c, k)
-                    c = ','
-                else:
-                    ret = '%s%s%s=>%s' % (ret, c, k, use[m]['map'][k])
-                    c = ','
-        if ret and ret[-1] == ',':
-            ret = ret[:-1]
-    return ret
-
-
-def true_intent_list(var):
-    lst = var['intent']
-    ret = []
-    for intent in lst:
-        try:
-            f = globals()['isintent_%s' % intent]
-        except KeyError:
-            pass
-        else:
-            if f(var):
-                ret.append(intent)
-    return ret
-
-
-def vars2fortran(block, vars, args, tab='', as_interface=False):
-    setmesstext(block)
-    ret = ''
-    nout = []
-    for a in args:
-        if a in block['vars']:
-            nout.append(a)
-    if 'commonvars' in block:
-        for a in block['commonvars']:
-            if a in vars:
-                if a not in nout:
-                    nout.append(a)
-            else:
-                errmess(
-                    'vars2fortran: Confused?!: "%s" is not defined in vars.\n' % a)
-    if 'varnames' in block:
-        nout.extend(block['varnames'])
-    if not as_interface:
-        for a in list(vars.keys()):
-            if a not in nout:
-                nout.append(a)
-    for a in nout:
-        if 'depend' in vars[a]:
-            for d in vars[a]['depend']:
-                if d in vars and 'depend' in vars[d] and a in vars[d]['depend']:
-                    errmess(
-                        'vars2fortran: Warning: cross-dependence between variables "%s" and "%s"\n' % (a, d))
-        if 'externals' in block and a in block['externals']:
-            if isintent_callback(vars[a]):
-                ret = '%s%sintent(callback) %s' % (ret, tab, a)
-            ret = '%s%sexternal %s' % (ret, tab, a)
-            if isoptional(vars[a]):
-                ret = '%s%soptional %s' % (ret, tab, a)
-            if a in vars and 'typespec' not in vars[a]:
-                continue
-            cont = 1
-            for b in block['body']:
-                if a == b['name'] and b['block'] == 'function':
-                    cont = 0
-                    break
-            if cont:
-                continue
-        if a not in vars:
-            #show(vars)
-            outmess('vars2fortran: No definition for argument "%s".\n' % a)
-            continue
-        if a == block['name']:
-            if block['block'] != 'function' or block.get('result'):
-                # 1) skip declaring a variable that name matches with
-                #    subroutine name
-                # 2) skip declaring function when its type is
-                #    declared via `result` construction
-                continue
-        if 'typespec' not in vars[a]:
-            if 'attrspec' in vars[a] and 'external' in vars[a]['attrspec']:
-                if a in args:
-                    ret = '%s%sexternal %s' % (ret, tab, a)
-                continue
-            #show(vars[a])
-            outmess('vars2fortran: No typespec for argument "%s".\n' % a)
-            continue
-        vardef = vars[a]['typespec']
-        if vardef == 'type' and 'typename' in vars[a]:
-            vardef = '%s(%s)' % (vardef, vars[a]['typename'])
-        selector = {}
-        if 'kindselector' in vars[a]:
-            selector = vars[a]['kindselector']
-        elif 'charselector' in vars[a]:
-            selector = vars[a]['charselector']
-        if '*' in selector:
-            if selector['*'] in ['*', ':']:
-                vardef = '%s*(%s)' % (vardef, selector['*'])
-            else:
-                vardef = '%s*%s' % (vardef, selector['*'])
-        else:
-            if 'len' in selector:
-                vardef = '%s(len=%s' % (vardef, selector['len'])
-                if 'kind' in selector:
-                    vardef = '%s,kind=%s)' % (vardef, selector['kind'])
-                else:
-                    vardef = '%s)' % (vardef)
-            elif 'kind' in selector:
-                vardef = '%s(kind=%s)' % (vardef, selector['kind'])
-        c = ' '
-        if 'attrspec' in vars[a]:
-            attr = [l for l in vars[a]['attrspec']
-                    if l not in ['external']]
-            if as_interface and 'intent(in)' in attr and 'intent(out)' in attr:
-                # In Fortran, intent(in, out) are conflicting while
-                # intent(in, out) can be specified only via
-                # `!f2py intent(out) ..`.
-                # So, for the Fortran interface, we'll drop
-                # intent(out) to resolve the conflict.
-                attr.remove('intent(out)')
-            if attr:
-                vardef = '%s, %s' % (vardef, ','.join(attr))
-                c = ','
-        if 'dimension' in vars[a]:
-            vardef = '%s%sdimension(%s)' % (
-                vardef, c, ','.join(vars[a]['dimension']))
-            c = ','
-        if 'intent' in vars[a]:
-            lst = true_intent_list(vars[a])
-            if lst:
-                vardef = '%s%sintent(%s)' % (vardef, c, ','.join(lst))
-            c = ','
-        if 'check' in vars[a]:
-            vardef = '%s%scheck(%s)' % (vardef, c, ','.join(vars[a]['check']))
-            c = ','
-        if 'depend' in vars[a]:
-            vardef = '%s%sdepend(%s)' % (
-                vardef, c, ','.join(vars[a]['depend']))
-            c = ','
-        if '=' in vars[a]:
-            v = vars[a]['=']
-            if vars[a]['typespec'] in ['complex', 'double complex']:
-                try:
-                    v = eval(v)
-                    v = '(%s,%s)' % (v.real, v.imag)
-                except Exception:
-                    pass
-            vardef = '%s :: %s=%s' % (vardef, a, v)
-        else:
-            vardef = '%s :: %s' % (vardef, a)
-        ret = '%s%s%s' % (ret, tab, vardef)
-    return ret
-######
-
-
-# We expose post_processing_hooks as global variable so that
-# user-libraries could register their own hooks to f2py.
-post_processing_hooks = []
-
 
 def crackfortran(files):
-    global usermodules, post_processing_hooks
+    global usermodules
 
     outmess('Reading fortran codes...\n', 0)
     readfortrancode(files, crackline)
     outmess('Post-processing...\n', 0)
     usermodules = []
     postlist = postcrack(grouplist[0])
-    outmess('Applying post-processing hooks...\n', 0)
-    for hook in post_processing_hooks:
-        outmess(f'  {hook.__name__}\n', 0)
-        postlist = traverse(postlist, hook)
     outmess('Post-processing (stage 2)...\n', 0)
     postlist = postcrack2(postlist)
     return usermodules + postlist
-
-
-def crack2fortran(block):
-    global f2py_version
-
-    pyf = crack2fortrangen(block) + '\n'
-    header = """!    -*- f90 -*-
-! Note: the context of this file is case sensitive.
-"""
-    footer = """
-! This file was auto-generated with f2py (version:%s).
-! See:
-! https://web.archive.org/web/20140822061353/http://cens.ioc.ee/projects/f2py2e
-""" % (f2py_version)
-    return header + pyf + footer
-
-
-def _is_visit_pair(obj):
-    return (isinstance(obj, tuple)
-            and len(obj) == 2
-            and isinstance(obj[0], (int, str)))
-
-
-def traverse(obj, visit, parents=[], result=None, *args, **kwargs):
-    '''Traverse f2py data structure with the following visit function:
-
-    def visit(item, parents, result, *args, **kwargs):
-        """
-
-        parents is a list of key-"f2py data structure" pairs from which
-        items are taken from.
-
-        result is a f2py data structure that is filled with the
-        return value of the visit function.
-
-        item is 2-tuple (index, value) if parents[-1][1] is a list
-        item is 2-tuple (key, value) if parents[-1][1] is a dict
-
-        The return value of visit must be None, or of the same kind as
-        item, that is, if parents[-1] is a list, the return value must
-        be 2-tuple (new_index, new_value), or if parents[-1] is a
-        dict, the return value must be 2-tuple (new_key, new_value).
-
-        If new_index or new_value is None, the return value of visit
-        is ignored, that is, it will not be added to the result.
-
-        If the return value is None, the content of obj will be
-        traversed, otherwise not.
-        """
-    '''
-
-    if _is_visit_pair(obj):
-        if obj[0] == 'parent_block':
-            # avoid infinite recursion
-            return obj
-        new_result = visit(obj, parents, result, *args, **kwargs)
-        if new_result is not None:
-            assert _is_visit_pair(new_result)
-            return new_result
-        parent = obj
-        result_key, obj = obj
-    else:
-        parent = (None, obj)
-        result_key = None
-
-    if isinstance(obj, list):
-        new_result = []
-        for index, value in enumerate(obj):
-            new_index, new_item = traverse((index, value), visit,
-                                           parents=parents + [parent],
-                                           result=result, *args, **kwargs)
-            if new_index is not None:
-                new_result.append(new_item)
-    elif isinstance(obj, dict):
-        new_result = dict()
-        for key, value in obj.items():
-            new_key, new_value = traverse((key, value), visit,
-                                          parents=parents + [parent],
-                                          result=result, *args, **kwargs)
-            if new_key is not None:
-                new_result[new_key] = new_value
-    else:
-        new_result = obj
-
-    if result_key is None:
-        return new_result
-    return result_key, new_result
-
-
-def character_backward_compatibility_hook(item, parents, result,
-                                          *args, **kwargs):
-    """Previously, Fortran character was incorrectly treated as
-    character*1. This hook fixes the usage of the corresponding
-    variables in `check`, `dimension`, `=`, and `callstatement`
-    expressions.
-
-    The usage of `char*` in `callprotoargument` expression can be left
-    unchanged because C `character` is C typedef of `char`, although,
-    new implementations should use `character*` in the corresponding
-    expressions.
-
-    See https://github.com/numpy/numpy/pull/19388 for more information.
-
-    """
-    parent_key, parent_value = parents[-1]
-    key, value = item
-
-    def fix_usage(varname, value):
-        value = re.sub(r'[*]\s*\b' + varname + r'\b', varname, value)
-        value = re.sub(r'\b' + varname + r'\b\s*[\[]\s*0\s*[\]]',
-                       varname, value)
-        return value
-
-    if parent_key in ['dimension', 'check']:
-        assert parents[-3][0] == 'vars'
-        vars_dict = parents[-3][1]
-    elif key == '=':
-        assert parents[-2][0] == 'vars'
-        vars_dict = parents[-2][1]
-    else:
-        vars_dict = None
-
-    new_value = None
-    if vars_dict is not None:
-        new_value = value
-        for varname, vd in vars_dict.items():
-            if ischaracter(vd):
-                new_value = fix_usage(varname, new_value)
-    elif key == 'callstatement':
-        vars_dict = parents[-2][1]['vars']
-        new_value = value
-        for varname, vd in vars_dict.items():
-            if ischaracter(vd):
-                # replace all occurrences of `<varname>` with
-                # `&<varname>` in argument passing
-                new_value = re.sub(
-                    r'(?<![&])\b' + varname + r'\b', '&' + varname, new_value)
-
-    if new_value is not None:
-        if new_value != value:
-            # We report the replacements here so that downstream
-            # software could update their source codes
-            # accordingly. However, such updates are recommended only
-            # when BC with numpy 1.21 or older is not required.
-            outmess(f'character_bc_hook[{parent_key}.{key}]:'
-                    f' replaced `{value}` -> `{new_value}`\n', 1)
-        return (key, new_value)
-
-
-post_processing_hooks.append(character_backward_compatibility_hook)
-
-
-if __name__ == "__main__":
-    files = []
-    funcs = []
-    f = 1
-    f2 = 0
-    f3 = 0
-    showblocklist = 0
-    for l in sys.argv[1:]:
-        if l == '':
-            pass
-        elif l[0] == ':':
-            f = 0
-        elif l == '-quiet':
-            quiet = 1
-            verbose = 0
-        elif l == '-verbose':
-            verbose = 2
-            quiet = 0
-        elif l == '-fix':
-            if strictf77:
-                outmess(
-                    'Use option -f90 before -fix if Fortran 90 code is in fix form.\n', 0)
-            skipemptyends = 1
-            sourcecodeform = 'fix'
-        elif l == '-skipemptyends':
-            skipemptyends = 1
-        elif l == '--ignore-contains':
-            ignorecontains = 1
-        elif l == '-f77':
-            strictf77 = 1
-            sourcecodeform = 'fix'
-        elif l == '-f90':
-            strictf77 = 0
-            sourcecodeform = 'free'
-            skipemptyends = 1
-        elif l == '-h':
-            f2 = 1
-        elif l == '-show':
-            showblocklist = 1
-        elif l == '-m':
-            f3 = 1
-        elif l[0] == '-':
-            errmess('Unknown option %s\n' % repr(l))
-        elif f2:
-            f2 = 0
-            pyffilename = l
-        elif f3:
-            f3 = 0
-            f77modulename = l
-        elif f:
-            try:
-                open(l).close()
-                files.append(l)
-            except OSError as detail:
-                errmess(f'OSError: {detail!s}\n')
-        else:
-            funcs.append(l)
-    if not strictf77 and f77modulename and not skipemptyends:
-        outmess("""\
-  Warning: You have specified module name for non Fortran 77 code that
-  should not need one (expect if you are scanning F90 code for non
-  module blocks but then you should use flag -skipemptyends and also
-  be sure that the files do not contain programs without program
-  statement).
-""", 0)
-
-    postlist = crackfortran(files)
-    if pyffilename:
-        outmess('Writing fortran code to file %s\n' % repr(pyffilename), 0)
-        pyf = crack2fortran(postlist)
-        with open(pyffilename, 'w') as f:
-            f.write(pyf)
-    if showblocklist:
-        show(postlist)

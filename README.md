@@ -11,3 +11,26 @@ This code is based on the following original software:
 - [crackfortran](https://github.com/numpy/numpy/tree/main/numpy/f2py) from the Numpy/f2py python module
 
 
+
+
+## Documentation
+
+The full documentation lives in the `doc` folder:
+
+```console
+pip install -r doc/requirements.txt
+sphinx-build -b html doc doc/_build/html
+```
+
+| Page | Content |
+|------|---------|
+| `quickstart.rst` | Installation, `conf.py`, first build |
+| `how_to_comment.rst` | How to write the Fortran comments (read this first) |
+| `fortran_autodoc.rst` | The `f:auto*` directives, options, configuration values |
+| `fortran_domain.rst` | Manual directives, field lists, roles, cross-references |
+| `examples.rst`, `example_sf_arrays.rst`, `example_ed_input_vars.rst` | Worked examples on `SF_ARRAYS` and `ED_INPUT_VARS` |
+| `api.rst` | Python API (`F90toRst`, domain classes) |
+| `limitations.rst` | Known limitations and workarounds |
+
+After editing a Fortran file, rebuild with `sphinx-build -E ...`: the sources
+are not registered as dependencies of the pages.
